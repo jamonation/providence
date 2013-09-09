@@ -1,6 +1,6 @@
 <?php
 /* ----------------------------------------------------------------------
- * listItemSplitterRefinery.php : 
+ * objectSplitterRefinery.php : 
  * ----------------------------------------------------------------------
  * CollectiveAccess
  * Open-source collections management software
@@ -28,12 +28,12 @@
  	require_once(__CA_LIB_DIR__.'/ca/Import/BaseRefinery.php');
  	require_once(__CA_LIB_DIR__.'/ca/Utils/DataMigrationUtils.php');
  
-	class listItemSplitterRefinery extends BaseRefinery {
+	class objectSplitterRefinery extends BaseRefinery {
 		# -------------------------------------------------------
 		public function __construct() {
-			$this->ops_name = 'listItemSplitter';
-			$this->ops_title = _t('List item splitter');
-			$this->ops_description = _t('Provides several list item-related import functions: splitting of many items in a string into separate names, and merging entity data with item names.');
+			$this->ops_name = 'objectSplitter';
+			$this->ops_title = _t('Object splitter');
+			$this->ops_description = _t('Splits objects');
 			
 			$this->opb_returns_multiple_values = true;
 			
@@ -56,114 +56,92 @@
 		 *
 		 */
 		public function refine(&$pa_destination_data, $pa_group, $pa_item, $pa_source_data, $pa_options=null) {
-			// Set list 
-			$vn_list_id = null;
-			if ($vs_list = $pa_item['settings']['listItemSplitter_list']) {
-				$vn_list_id = caGetListID($vs_list);
-			}
-			if (!$vn_list_id) {
-				// No list = bail!
-				if ($o_log) { $o_log->logError(_t('[listItemSplitterRefinery] Could not find list %1 for item %2; item was skipped', $vs_list, $vs_list_item)); }
-				return array();
-			} 
-		
-			$pa_options['list_id'] = $vn_list_id;
-			
-			return caGenericImportSplitter('listItemSplitter', 'listItem', 'ca_list_items', $this, $pa_destination_data, $pa_group, $pa_item, $pa_source_data, $pa_options);
+			return caGenericImportSplitter('objectSplitter', 'object', 'ca_objects', $this, $pa_destination_data, $pa_group, $pa_item, $pa_source_data, $pa_options);
 		}
 		# -------------------------------------------------------	
 		/**
-		 * listItemSplitter returns multiple values
+		 * objectSplitter returns multiple values
 		 *
-		 * @return bool
+		 * @return bool Always true
 		 */
 		public function returnsMultipleValues() {
-			return $this->opb_returns_multiple_values;
+			return true;
 		}
 		# -------------------------------------------------------
 	}
 	
-	 BaseRefinery::$s_refinery_settings['listItemSplitter'] = array(		
-			'listItemSplitter_delimiter' => array(
+	 BaseRefinery::$s_refinery_settings['objectSplitter'] = array(		
+			'objectSplitter_delimiter' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_SELECT,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
 				'label' => _t('Delimiter'),
-				'description' => _t('Sets the value of the delimiter to break on, separating data source values.')
+				'description' => _t('Sets the value of the delimiter to break on, separating data source values')
 			),
-			'listItemSplitter_relationshipType' => array(
+			'objectSplitter_relationshipType' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_SELECT,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
 				'label' => _t('Relationship type'),
-				'description' => _t('Accepts a constant type code for the relationship type or a reference to the location in the data source where the type can be found.')
+				'description' => _t('Accepts a constant type code for the relationship type or a reference to the location in the data source where the type can be found.  Note for object data: if the relationship type matches that set as the hierarchy control, the object will be pulled in as a "child" element in the object hierarchy.')
 			),
-			'listItemSplitter_listItemType' => array(
+			'objectSplitter_objectType' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_SELECT,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
-				'label' => _t('List item type'),
-				'description' => _t('Accepts a constant list item idno from the list list_item_types or a reference to the location in the data source where the type can be found.')
+				'label' => _t('Object type'),
+				'description' => _t('Accepts a constant list item idno from the list object_types or a reference to the location in the data source where the type can be found.')
 			),
-			'listItemSplitter_attributes' => array(
+			'objectSplitter_attributes' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_SELECT,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
 				'label' => _t('Attributes'),
-				'description' => _t('Sets or maps metadata for the list item record by referencing the metadataElement code and the location in the data source where the data values can be found.')
+				'description' => _t('Sets or maps metadata for the object record by referencing the metadataElement code and the location in the data source where the data values can be found.')
 			),
-			'listItemSplitter_list' => array(
-				'formatType' => FT_TEXT,
-				'displayType' => DT_SELECT,
-				'width' => 10, 'height' => 1,
-				'takesLocale' => false,
-				'default' => '',
-				'label' => _t('List'),
-				'description' => _t('Identifies the root node of the list item list to add items to.')
-			),
-			'listItemSplitter_relationshipTypeDefault' => array(
-				'formatType' => FT_TEXT,
-				'displayType' => DT_FIELD,
-				'width' => 10, 'height' => 1,
-				'takesLocale' => false,
-				'default' => '',
-				'label' => _t('Relationship type default'),
-				'description' => _t('Sets the default relationship type that will be used if none are defined or if the data source values do not match any values in the CollectiveAccess system')
-			),
-			'listItemSplitter_listItemTypeDefault' => array(
-				'formatType' => FT_TEXT,
-				'displayType' => DT_FIELD,
-				'width' => 10, 'height' => 1,
-				'takesLocale' => false,
-				'default' => '',
-				'label' => _t('List item type default'),
-				'description' => _t('Sets the default list item type that will be used if none are defined or if the data source values do not match any values in the CollectiveAccess list list_item_types')
-			),
-			'listItemSplitter_parents' => array(
+			'objectSplitter_parents' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_SELECT,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
 				'label' => _t('Parents'),
-				'description' => _t('List item parents to create, if required')
+				'description' => _t('Object parents to create, if required')
 			),
-			'listItemSplitter_interstitial' => array(
+			'objectSplitter_relationshipTypeDefault' => array(
+				'formatType' => FT_TEXT,
+				'displayType' => DT_FIELD,
+				'width' => 10, 'height' => 1,
+				'takesLocale' => false,
+				'default' => '',
+				'label' => _t('Relationship type default'),
+				'description' => _t('Sets the default relationship type that will be used if none are defined or if the data source values do not match any values in the CollectiveAccess system.')
+			),
+			'objectSplitter_objectTypeDefault' => array(
+				'formatType' => FT_TEXT,
+				'displayType' => DT_FIELD,
+				'width' => 10, 'height' => 1,
+				'takesLocale' => false,
+				'default' => '',
+				'label' => _t('Object type default'),
+				'description' => _t('Sets the default object type that will be used if none are defined or if the data source values do not match any values in the CollectiveAccess list object_types.')
+			),
+			'objectSplitter_interstitial' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_SELECT,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
 				'label' => _t('Interstitial attributes'),
-				'description' => _t('Sets or maps metadata for the interstitial vocabulary <em>relationship</em> record by referencing the metadataElement code and the location in the data source where the data values can be found.')
+				'description' => _t('Sets or maps metadata for the interstitial object <em>relationship</em> record by referencing the metadataElement code and the location in the data source where the data values can be found.')
 			)
 		);
 ?>
