@@ -1,6 +1,6 @@
 <?php
 /* ----------------------------------------------------------------------
- * listItemSplitterRefinery.php : 
+ * objectLotSplitterRefinery.php : 
  * ----------------------------------------------------------------------
  * CollectiveAccess
  * Open-source collections management software
@@ -28,13 +28,13 @@
  	require_once(__CA_LIB_DIR__.'/ca/Import/BaseRefinery.php');
  	require_once(__CA_LIB_DIR__.'/ca/Utils/DataMigrationUtils.php');
  
-	class listItemSplitterRefinery extends BaseRefinery {
+	class objectLotSplitterRefinery extends BaseRefinery {
 		# -------------------------------------------------------
 		public function __construct() {
-			$this->ops_name = 'listItemSplitter';
-			$this->ops_title = _t('List item splitter');
-			$this->ops_description = _t('Provides several list item-related import functions: splitting of many items in a string into separate names, and merging entity data with item names.');
-			
+			$this->ops_name = 'objectLotSplitter';
+			$this->ops_title = _t('Object lot splitter');
+			$this->ops_description = _t('Provides several lot-related import functions: splitting of multiple lots in a string into individual values, mapping of type and relationship type for related lots, and merging lot data with lot names.');
+
 			$this->opb_returns_multiple_values = true;
 			
 			parent::__construct();
@@ -56,23 +56,11 @@
 		 *
 		 */
 		public function refine(&$pa_destination_data, $pa_group, $pa_item, $pa_source_data, $pa_options=null) {
-			// Set list 
-			$vn_list_id = null;
-			if ($vs_list = $pa_item['settings']['listItemSplitter_list']) {
-				$vn_list_id = caGetListID($vs_list);
-			}
-			if (!$vn_list_id) {
-				// No list = bail!
-				if ($o_log) { $o_log->logError(_t('[listItemSplitterRefinery] Could not find list %1 for item %2; item was skipped', $vs_list, $vs_list_item)); }
-				return array();
-			} 
-			$pa_options['list_id'] = $vn_list_id;
-			
-			return caGenericImportSplitter('listItemSplitter', 'listItem', 'ca_list_items', $this, $pa_destination_data, $pa_group, $pa_item, $pa_source_data, $pa_options);
+			return caGenericImportSplitter('objectLotSplitter', 'objectLot', 'ca_object_lots', $this, $pa_destination_data, $pa_group, $pa_item, $pa_source_data, $pa_options);
 		}
 		# -------------------------------------------------------	
 		/**
-		 * listItemSplitter returns multiple values
+		 * objectLotSplitter returns multiple values
 		 *
 		 * @return bool
 		 */
@@ -82,17 +70,17 @@
 		# -------------------------------------------------------
 	}
 	
-	 BaseRefinery::$s_refinery_settings['listItemSplitter'] = array(		
-			'listItemSplitter_delimiter' => array(
+	 BaseRefinery::$s_refinery_settings['objectLotSplitter'] = array(		
+			'objectLotSplitter_delimiter' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_SELECT,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
 				'label' => _t('Delimiter'),
-				'description' => _t('Sets the value of the delimiter to break on, separating data source values.')
+				'description' => _t('Sets the value of the delimiter to break on, separating data source values')
 			),
-			'listItemSplitter_relationshipType' => array(
+			'objectLotSplitter_relationshipType' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_SELECT,
 				'width' => 10, 'height' => 1,
@@ -101,68 +89,68 @@
 				'label' => _t('Relationship type'),
 				'description' => _t('Accepts a constant type code for the relationship type or a reference to the location in the data source where the type can be found.')
 			),
-			'listItemSplitter_listItemType' => array(
+			'objectLotSplitter_objectLotType' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_SELECT,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
-				'label' => _t('List item type'),
-				'description' => _t('Accepts a constant list item idno from the list list_item_types or a reference to the location in the data source where the type can be found.')
+				'label' => _t('Lot type'),
+				'description' => _t('Accepts a constant list item idno from the list object_lot_types or a reference to the location in the data source where the type can be found.')
 			),
-			'listItemSplitter_attributes' => array(
+			'objectLotSplitter_objectLotStatus' => array(
+				'formatType' => FT_TEXT,
+				'displayType' => DT_SELECT,
+				'width' => 10, 'height' => 1,
+				'takesLocale' => false,
+				'default' => '',
+				'label' => _t('Lot status'),
+				'description' => _t('Accepts a constant list item idno from the list object_lot_statuses or a reference to the location in the data source where the status can be found.')
+			),
+			'objectLotSplitter_attributes' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_SELECT,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
 				'label' => _t('Attributes'),
-				'description' => _t('Sets or maps metadata for the list item record by referencing the metadataElement code and the location in the data source where the data values can be found.')
+				'description' => _t('Sets or maps metadata for the lot record by referencing the metadataElement code and the location in the data source where the data values can be found.')
 			),
-			'listItemSplitter_list' => array(
-				'formatType' => FT_TEXT,
-				'displayType' => DT_SELECT,
-				'width' => 10, 'height' => 1,
-				'takesLocale' => false,
-				'default' => '',
-				'label' => _t('List'),
-				'description' => _t('Identifies the root node of the list item list to add items to.')
-			),
-			'listItemSplitter_relationshipTypeDefault' => array(
+			'objectLotSplitter_relationshipTypeDefault' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_FIELD,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
 				'label' => _t('Relationship type default'),
-				'description' => _t('Sets the default relationship type that will be used if none are defined or if the data source values do not match any values in the CollectiveAccess system')
+				'description' => _t('Sets the default relationship type that will be used if none are defined or if the data source values do not match any values in the CollectiveAccess system.')
 			),
-			'listItemSplitter_listItemTypeDefault' => array(
+			'objectLotSplitter_objectLotTypeDefault' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_FIELD,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
-				'label' => _t('List item type default'),
-				'description' => _t('Sets the default list item type that will be used if none are defined or if the data source values do not match any values in the CollectiveAccess list list_item_types')
+				'label' => _t('Lot type default'),
+				'description' => _t('Sets the default lot type that will be used if none are defined or if the data source values do not match any values in the CollectiveAccess list object_lot_types.')
 			),
-			'listItemSplitter_parents' => array(
+			'objectLotSplitter_objectLotStatusDefault' => array(
 				'formatType' => FT_TEXT,
-				'displayType' => DT_SELECT,
+				'displayType' => DT_FIELD,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
-				'label' => _t('Parents'),
-				'description' => _t('List item parents to create, if required')
+				'label' => _t('Lot status default'),
+				'description' => _t('Sets the default lot status that will be used if none are defined or if the data source values do not match any values in the CollectiveAccess list object_lot_statuses.')
 			),
-			'listItemSplitter_interstitial' => array(
+			'objectLotSplitter_interstitial' => array(
 				'formatType' => FT_TEXT,
 				'displayType' => DT_SELECT,
 				'width' => 10, 'height' => 1,
 				'takesLocale' => false,
 				'default' => '',
 				'label' => _t('Interstitial attributes'),
-				'description' => _t('Sets or maps metadata for the interstitial vocabulary <em>relationship</em> record by referencing the metadataElement code and the location in the data source where the data values can be found.')
+				'description' => _t('Sets or maps metadata for the interstitial lot <em>relationship</em> record by referencing the metadataElement code and the location in the data source where the data values can be found.')
 			)
 		);
 ?>
