@@ -128,7 +128,7 @@
 			return $this->ops_uri_value;
 		}
  		# ------------------------------------------------------------------
- 		public function parseValue($ps_value, $pa_element_info) {
+ 		public function parseValue($ps_value, $pa_element_info, $pa_options=null) {
 			$va_settings = $this->getSettingValuesFromElementArray($pa_element_info, array('uBioKeyCode'));
  			$ps_value = trim(preg_replace("![\t\n\r]+!", ' ', $ps_value));
  			$va_return = "";
@@ -208,7 +208,7 @@
  			return $vs_element;
  		}
  		# ------------------------------------------------------------------
- 		public function getAvailableSettings() {
+ 		public function getAvailableSettings($pa_element_info=null) {
  			global $_ca_attribute_settings;
 
  			return $_ca_attribute_settings['TaxonomyAttributeValue'];

@@ -182,10 +182,14 @@ class WLPlugSearchEngineSqlSearch extends BaseSearchPlugin implements IWLPlugSea
 	/**
 	 * Completely clear index (usually in preparation for a full reindex)
 	 */
-	public function truncateIndex() {
-		$this->opo_db->query("TRUNCATE TABLE ca_sql_search_word_index");
-		$this->opo_db->query("TRUNCATE TABLE ca_sql_search_words");
-		$this->opo_db->query("TRUNCATE TABLE ca_sql_search_ngrams");
+	public function truncateIndex($pn_table_num=null) {
+		if ($pn_table_num > 0) {
+			$this->opo_db->query("DELETE FROM ca_sql_search_word_index WHERE table_num = ?", array((int)$pn_table_num));
+		} else {
+			$this->opo_db->query("TRUNCATE TABLE ca_sql_search_word_index");
+			$this->opo_db->query("TRUNCATE TABLE ca_sql_search_words");
+			$this->opo_db->query("TRUNCATE TABLE ca_sql_search_ngrams");
+		}
 		return true;
 	}
 	# -------------------------------------------------------
@@ -395,21 +399,16 @@ class WLPlugSearchEngineSqlSearch extends BaseSearchPlugin implements IWLPlugSea
 		if (is_numeric($vs_field)) {
 			$vs_fld_num = $vs_field;
 		} else {
-			$vs_fld_num = (int)$this->getFieldNum($vs_table, $vs_field);
+			$vs_fld_num = $this->getFieldNum($vs_table, $vs_field);
 		}
+		
 		if (!strlen($vs_fld_num)) {
 			$t_element = new ca_metadata_elements();
 			if ($t_element->load(array('element_code' => $vs_field))) {
 				switch ($t_element->get('datatype')) {
-					case 4:	// geocode
-					case 8:	// length
-					case 9:	// weight
-						// noop
-						// break;
 					default:
 						return array('table_num' => $vs_table_num, 'element_id' => $t_element->getPrimaryKey(), 'field_num' => 'A'.$t_element->getPrimaryKey(), 'datatype' => $t_element->get('datatype'), 'element_info' => $t_element->getFieldValuesArray());
 						break;
-				
 				}
 			}
 		} else {
@@ -1100,20 +1099,27 @@ class WLPlugSearchEngineSqlSearch extends BaseSearchPlugin implements IWLPlugSea
 								if ($vs_direct_sql_query) {
 									$vs_direct_sql_query = str_replace('^JOIN', "", $vs_direct_sql_query);
 								}
+								
 								$vs_sql = "
-									DELETE FROM {$ps_dest_table} 
-									USING {$ps_dest_table}, ca_sql_search_words sw, ca_sql_search_word_index swi
+									SELECT row_id
+									FROM ca_sql_search_words sw
+									INNER JOIN ca_sql_search_word_index AS swi ON sw.word_id = swi.word_id
 									WHERE 
-										".($vs_sql_where ? "{$vs_sql_where} AND " : "")."
-										{$ps_dest_table}.row_id = swi.row_id AND
-										sw.word_id = swi.word_id
-										AND
-										swi.table_num = ?
-										".($this->getOption('omitPrivateIndexing') ? " AND swi.access = 0" : '')."
-								";
-							
+										".($vs_sql_where ? "{$vs_sql_where} AND " : "")." swi.table_num = ? 
+										".($this->getOption('omitPrivateIndexing') ? " AND swi.access = 0" : '');
+								
 								//print "$vs_sql<hr>";
 								$qr_res = $this->opo_db->query($vs_sql, (int)$pn_subject_tablenum);
+								$va_ids = $qr_res->getAllFieldValues("row_id");
+								
+								$vs_sql = "
+									DELETE FROM {$ps_dest_table} 
+									WHERE 
+										row_id IN (?)
+								";
+							
+								$qr_res = $this->opo_db->query($vs_sql, array($va_ids));
+								//print "$vs_sql<hr>";
 								break;
 							default:
 							case 'OR':
@@ -1378,14 +1384,30 @@ class WLPlugSearchEngineSqlSearch extends BaseSearchPlugin implements IWLPlugSea
 		}
 	}
 	# ------------------------------------------------
-	public function updateIndexingInPlace($pn_subject_tablenum, $pa_subject_row_ids, $pn_content_tablenum, $ps_content_fieldnum, $pn_content_row_id, $pm_content, $pa_options=null) {
+	/**
+	 *
+	 *
+	 * @param int $pn_subject_tablenum
+	 * @param array $pa_subject_row_ids
+	 * @param int $pn_content_tablenum
+	 * @param string $ps_content_fieldnum
+	 * @param int $pn_content_row_id
+	 * @param string $ps_content
+	 * @param array $pa_options
+	 *		literalContent = array of text content to be applied without tokenization
+	 *		BOOST = Indexing boost to apply
+	 *		PRIVATE = Set indexing to private
+	 */
+	public function updateIndexingInPlace($pn_subject_tablenum, $pa_subject_row_ids, $pn_content_tablenum, $ps_content_fieldnum, $pn_content_row_id, $ps_content, $pa_options=null) {
 		
 		// Find existing indexing for this subject and content 	
 		foreach($pa_subject_row_ids as $vn_subject_row_id) {
 			$this->removeRowIndexing($pn_subject_tablenum, $vn_subject_row_id, $pn_content_tablenum, $ps_content_fieldnum, $pn_content_row_id);
 		}
 		
-		$va_words = $this->_tokenize($pm_content);
+		$va_words = $this->_tokenize($ps_content);
+		$va_literal_content = caGetOption("literalContent", $pa_options, null);
+		if ($va_literal_content && !is_array($va_literal_content)) { $va_literal_content = array($va_literal_content); }
 		
 		$vn_boost = 1;
 		if (isset($pa_options['BOOST'])) {
@@ -1417,6 +1439,14 @@ class WLPlugSearchEngineSqlSearch extends BaseSearchPlugin implements IWLPlugSea
 				if (!($vn_word_id = $this->getWordID($vs_word))) { continue; }
 				$va_row_insert_sql[] = "({$pn_subject_tablenum}, {$vn_row_id}, {$pn_content_tablenum}, '{$ps_content_fieldnum}', {$pn_content_row_id}, {$vn_word_id}, {$vn_boost}, {$vn_private})";
 				$vn_seq++;
+			}
+			
+			if (is_array($va_literal_content)) {
+				foreach($va_literal_content as $vs_literal) {
+					if (!($vn_word_id = $this->getWordID($vs_literal))) { continue; }
+					$va_row_insert_sql[] = "({$pn_subject_tablenum}, {$vn_row_id}, {$pn_content_tablenum}, '{$ps_content_fieldnum}', {$pn_content_row_id}, {$vn_word_id}, {$vn_boost}, {$vn_private})";
+					$vn_seq++;
+				}
 			}
 		}
 		

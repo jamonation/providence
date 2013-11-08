@@ -36,6 +36,7 @@
 	$vs_add_label 		= $this->getVar('add_label');
 	$va_rel_types		= $this->getVar('relationship_types');
 	$vs_placement_code 	= $this->getVar('placement_code');
+	$vn_placement_id	= (int)$va_settings['placement_id'];
 	$vb_batch			= $this->getVar('batch');
 
 	$vs_first_color 	= 	((isset($va_settings['colorFirstItem']) && $va_settings['colorFirstItem'])) ? $va_settings['colorFirstItem'] : '';
@@ -48,7 +49,7 @@
 	$va_initial_values	= $this->getVar('initialValues');
 	
 	// params to pass during occurrence lookup
-	$va_lookup_params = (isset($va_settings['restrict_to_type']) && $va_settings['restrict_to_type']) ? array('type' => $va_settings['restrict_to_type'], 'noSubtypes' => (int)$va_settings['dont_include_subtypes_in_type_restriction']) : array();
+	$va_lookup_params = array('type' => isset($va_settings['restrict_to_type']) ? $va_settings['restrict_to_type'] : '', 'noSubtypes' => (int)$va_settings['dont_include_subtypes_in_type_restriction']);
 
 	if ($vb_batch) {
 		print caBatchEditorRelationshipModeControl($t_item, $vs_id_prefix);
@@ -310,6 +311,7 @@
 			initialValues: <?php print json_encode($va_initial_values); ?>,
 			initialValueOrder: <?php print json_encode(array_keys($va_initial_values)); ?>,
 			itemID: '<?php print $vs_id_prefix; ?>Item_',
+			placementID: '<?php print $vn_placement_id; ?>',
 			templateClassName: 'caNewItemTemplate',
 			initialValueTemplateClassName: 'caItemTemplate',
 			itemListClassName: 'caItemList',
@@ -327,11 +329,13 @@
 			listSortItems: 'div.roundedRel',			
 			autocompleteInputID: '<?php print $vs_id_prefix; ?>_autocomplete',
 			quickaddPanel: caRelationQuickAddPanel<?php print $vs_id_prefix; ?>,
-			quickaddUrl: '<?php print caNavUrl($this->request, 'editor/storage_locations', 'StorageLocationQuickAdd', 'Form', array('location_id' => 0)); ?>',
+			quickaddUrl: '<?php print caNavUrl($this->request, 'editor/storage_locations', 'StorageLocationQuickAdd', 'Form', array('location_id' => 0, 'dont_include_subtypes_in_type_restriction' => (int)$va_settings['dont_include_subtypes_in_type_restriction'])); ?>',
 			
 			interstitialButtonClassName: 'caInterstitialEditButton',
 			interstitialPanel: caRelationEditorPanel<?php print $vs_id_prefix; ?>,
 			interstitialUrl: '<?php print caNavUrl($this->request, 'editor', 'Interstitial', 'Form', array('t' => $t_item_rel->tableName())); ?>',
+			interstitialPrimaryTable: '<?php print $t_instance->tableName(); ?>',
+			interstitialPrimaryID: <?php print (int)$t_instance->getPrimaryKey(); ?>,
 			firstItemColor: '<?php print $vs_first_color; ?>',
 			lastItemColor: '<?php print $vs_last_color; ?>',
 			

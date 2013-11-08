@@ -3149,6 +3149,9 @@
             <placement code="validation_format">
               <bundle>validation_format</bundle>
             </placement>
+            <placement code="ca_settings">
+              <bundle>settings</bundle>
+            </placement>
             <placement code="access">
               <bundle>access</bundle>
             </placement>
@@ -3537,6 +3540,9 @@
             </placement>
             <placement code="settings">
               <bundle>settings</bundle>
+            </placement>
+            <placement code="ca_bundle_display_type_restrictions">
+              <bundle>ca_bundle_display_type_restrictions</bundle>
             </placement>
             <placement code="ca_users">
               <bundle>ca_users</bundle>

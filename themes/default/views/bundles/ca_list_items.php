@@ -51,7 +51,7 @@
 	$vn_browse_last_id = (int)$this->request->session->getVar('ca_list_items_'.$vs_id_prefix.'_browse_last_id');
 
 	// params to pass during occurrence lookup
-	$va_lookup_params = (isset($va_settings['restrict_to_type']) && $va_settings['restrict_to_type']) ? array('type' => $va_settings['restrict_to_type'], 'noSubtypes' => (int)$va_settings['dont_include_subtypes_in_type_restriction']) : array();
+	$va_lookup_params = array('type' => isset($va_settings['restrict_to_type']) ? $va_settings['restrict_to_type'] : '', 'noSubtypes' => (int)$va_settings['dont_include_subtypes_in_type_restriction']);
 
 	if ($vb_batch) {
 		print caBatchEditorRelationshipModeControl($t_item, $vs_id_prefix);
@@ -373,6 +373,8 @@
 			interstitialButtonClassName: 'caInterstitialEditButton',
 			interstitialPanel: caRelationEditorPanel<?php print $vs_id_prefix; ?>,
 			interstitialUrl: '<?php print caNavUrl($this->request, 'editor', 'Interstitial', 'Form', array('t' => $t_item_rel->tableName())); ?>',
+			interstitialPrimaryTable: '<?php print $t_instance->tableName(); ?>',
+			interstitialPrimaryID: <?php print (int)$t_instance->getPrimaryKey(); ?>,
 			
 			minRepeats: <?php print caGetOption('minRelationshipsPerRow', $va_settings, 0); ?>,
 			maxRepeats: <?php print caGetOption('maxRelationshipsPerRow', $va_settings, 65535); ?>
