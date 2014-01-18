@@ -203,7 +203,7 @@ class ca_metadata_elements extends LabelableBaseModelWithAttributes implements I
 	# Change logging
 	# ------------------------------------------------------
 	protected $UNIT_ID_FIELD = null;
-	protected $LOG_CHANGES_TO_SELF = false;
+	protected $LOG_CHANGES_TO_SELF = true;
 	protected $LOG_CHANGES_USING_AS_SUBJECT = array(
 		"FOREIGN_KEYS" => array(
 		
@@ -734,6 +734,7 @@ class ca_metadata_elements extends LabelableBaseModelWithAttributes implements I
 		
 		$va_sortable_elements = array();
 		foreach($va_elements as $vn_id => $va_element) {
+			if ((int)$va_element['datatype'] === 0) { continue; }
 			if (!isset($va_element['settings']['canBeUsedInSort'])) { $va_element['settings']['canBeUsedInSort'] = true; }
 			if ($va_element['settings']['canBeUsedInSort']) {
 				$va_sortable_elements[$va_element['element_id']] = $va_element;
