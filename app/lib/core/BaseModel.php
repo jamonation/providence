@@ -1185,6 +1185,12 @@ class BaseModel extends BaseObject {
 		if (!is_array($pa_fields)) {
 			$pa_fields = array($pa_fields => $pm_value);
 		}
+		             
+		// Convert locale codes to numeric locale_ids if necessary
+		if(class_exists("ca_locales") && (is_array($pa_fields) && isset($pa_fields['locale_id']) && (!is_numeric($pa_fi
+			$t_locale = new ca_locales();
+			$pa_fields['locale_id'] = $t_locale->localeCodeToID($pa_fields['locale_id']);
+		}
 
 		foreach($pa_fields as $vs_field => $vm_value) {
 			if (array_key_exists($vs_field, $this->FIELDS)) {
