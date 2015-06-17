@@ -1641,19 +1641,18 @@
 			return _t("Loads the AAT from a Getty-provided XML file.");
 		}
 		# -------------------------------------------------------
-
 		/**
-		 *
+		 * @param Zend_Console_Getopt|null $po_opts
+		 * @return bool
 		 */
 		public static function sync_data($po_opts=null) {
 			require_once(__CA_LIB_DIR__.'/ca/Sync/DataSynchronizer.php');
 			$o_sync = new DataSynchronizer();
-			$o_sync->sync();
-			//if (!($vs_file_path = $po_opts->getOption('file'))) {
-			//	CLIUtils::addError(_t("You must specify a file"));
-			//	return false;
-			//}
-
+			if ($o_sync->sync(array('consoleOutput' => true))) {
+				CLIUtils::addMessage(_t('Sync completed successfully'));
+			} else {
+				CLIUtils::addError(_t('Sync had errors'));
+			}
 		}
 		# -------------------------------------------------------
 		/**
@@ -1661,7 +1660,9 @@
 		 */
 		public static function sync_dataParamList() {
 			return array(
-				//"file|f=s" => _t('Path to AAT XML file.')
+				"source|s=s" => _t('Source to sync with. If omitted all sources will be synced.'),
+				"log|l-s" => _t('Path to directory in which to log sync details. If not set no logs will be recorded.'),
+				"log-level|d-s" => _t('Logging threshold. Possible values are, in ascending order of important: DEBUG, INFO, NOTICE, WARN, ERR, CRIT, ALERT. Default is INFO.')
 			);
 		}
 		# -------------------------------------------------------
