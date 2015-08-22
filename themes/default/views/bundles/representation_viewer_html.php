@@ -358,7 +358,7 @@
 	<div class="caMediaOverlayControls">
 			<div class='close'><a href="#" onclick="caMediaPanel.hidePanel(); return false;" title="close">&nbsp;&nbsp;&nbsp;</a></div>
 <?php
-		if ($this->request->user->canDoAction('can_download_media')) {
+		if ($this->request->user->canDoAction('can_download_media') || $this->request->user->canDoAction('can_download_ca_object_representations')) {
 ?>
 				<div class='download'>
 <?php 
@@ -418,7 +418,7 @@
 	<div class="caMediaOverlayControls">
 			<div class='close'><a href="#" onclick="caMediaPanel.hidePanel(); return false;" title="close">&nbsp;&nbsp;&nbsp;</a></div>
 <?php
-	if ($this->request->user->canDoAction('can_download_media')) {
+	if ($this->request->user->canDoAction('can_download_media') || $this->request->user->canDoAction('can_download_ca_object_representations')) {
 ?>
 				<div class='download'>
 <?php 
@@ -492,6 +492,7 @@
 			'viewer_base_url' => $this->request->getBaseUrlPath(),
 			'annotation_load_url' => caNavUrl($this->request, '*', '*', 'GetAnnotations', array('representation_id' => (int)$t_rep->getPrimaryKey(), $t_subject->primaryKey() => (int)$t_subject->getPrimaryKey())),
 			'annotation_save_url' => caNavUrl($this->request, '*', '*', 'SaveAnnotations', array('representation_id' => (int)$t_rep->getPrimaryKey(), $t_subject->primaryKey() => (int)$t_subject->getPrimaryKey())),
+			'download_url' => caNavUrl($this->request, '*', '*', 'DownloadRepresentation', array('representation_id' => (int)$t_rep->getPrimaryKey(), $t_subject->primaryKey() => (int)$t_subject->getPrimaryKey(), 'version' => 'original')),
 			'help_load_url' => caNavUrl($this->request, '*', '*', 'ViewerHelp', array()),
 			'annotationEditorPanel' => 'caRepresentationAnnotationEditor',
 			'annotationEditorUrl' => caNavUrl($this->request, 'editor/representation_annotations', 'RepresentationAnnotationQuickAdd', 'Form', array('representation_id' => (int)$t_rep->getPrimaryKey())),

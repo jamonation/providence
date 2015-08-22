@@ -7,7 +7,7 @@
  * ----------------------------------------------------------------------
  *
  * Software by Whirl-i-Gig (http://www.whirl-i-gig.com)
- * Copyright 2006-2014 Whirl-i-Gig
+ * Copyright 2006-2015 Whirl-i-Gig
  *
  * For more information visit http://www.CollectiveAccess.org
  *
@@ -156,7 +156,7 @@ class TimeExpressionParser {
 		global $g_ui_locale;
 		
 		$o_config = Configuration::load();
-		$this->opo_datetime_settings = Configuration::load($o_config->get('datetime_config'));
+		$this->opo_datetime_settings = Configuration::load(__CA_CONF_DIR__.'/datetime.conf');
 		
 		if (!$ps_iso_code) { $ps_iso_code = $g_ui_locale; }
 		if (!$ps_iso_code) { $ps_iso_code = 'en_US'; }
@@ -1377,9 +1377,9 @@ class TimeExpressionParser {
 		$va_dates = array();
 		if (sizeof($va_decade_indicators)) {
 			if (
-				(preg_match("/^([\d]{4})[\']{0,1}(".join("|", $va_decade_indicators)."){1}$/i", $va_token['value'], $va_matches))
+				(preg_match("/^([\d]{2,4})[\']{0,1}(".join("|", $va_decade_indicators)."){1}$/i", $va_token['value'], $va_matches))
 				||
-				(preg_match("/^([\d]{3})\_$/", $va_token['value'], $va_matches))
+				(preg_match("/^([\d]{3})(\_)$/", $va_token['value'], $va_matches))
 			) {
 				$vn_is_circa = $vb_circa_is_set ? 1 : 0;
 				
@@ -1402,20 +1402,24 @@ class TimeExpressionParser {
 							break(2);
 					}
 				}
-				if (strlen($va_matches[1]) == 3) { $va_matches[1].='0'; }
+
+				// decade expression with trailing underscore: 191_
+				if (isset($va_matches[2]) && ($va_matches[2] == '_') && (strlen($va_matches[1]) == 3)) {
+					$va_matches[1].='0';
+				}
 			
-				$vn_start_year = $va_matches[1] - ($va_matches[1] % 10);
+				$vn_start_year = (int) ($va_matches[1] - ($va_matches[1] % 10));
 				$va_dates['start'] = array(
 					'month' => 1, 'day' => 1, 'year' => $vn_start_year,
 					'uncertainty' => 0, 'uncertainty_units' => '', 'is_circa' => $vn_is_circa
 				);
 				$va_dates['end'] = array(
-					'month' => 12, 'day' => 31, 'year' => $vn_start_year + 9,
+					'month' => 12, 'day' => 31, 'year' => ($vn_start_year + 9),
 					'uncertainty' => 0, 'uncertainty_units' => '', 'is_circa' => $vn_is_circa
 				);
 			}
 		}
-		
+
 		return $va_dates;
 	}
 	# -------------------------------------------------------------------
@@ -2083,7 +2087,8 @@ class TimeExpressionParser {
 	#	end_as_iso8601 (true|false) [if true only the end date of the range is returned, in ISO8601 format]
 	#	dontReturnValueIfOnSameDayAsStart (true|false) [Only valid in conjunction with end_as_iso8601]
 	#	startHistoricTimestamp
-	#	endHistoricTimestamp 
+	#	endHistoricTimestamp
+	#	format 			(string) Format date/time output using PHP date()-style format string. The following subset of PHP date() formtting characters are supported: Y y d j F m n t g G h H i s [Default is null; don't use format string for output]
 	public function getText($pa_options=null) {
 		if (!$pa_options) { $pa_options = array(); }
 		foreach(array(
@@ -2306,6 +2311,76 @@ class TimeExpressionParser {
 				$vb_differing_uncertainties = true;
 			} else {
 				$vb_differing_uncertainties = false;
+			}
+			
+			// catch formats
+			if ($pa_options['format']) {
+				$va_seen = array();
+				$vs_output = '';
+				for($vn_i=0; $vn_i < strlen($pa_options['format']); $vn_i++) {
+					$vb_not_handled = false;
+					switch($vs_c = $pa_options['format'][$vn_i]) {
+						case 'Y':
+							$vn_year = (!$va_seen[$vs_c]) ? $va_start_pieces['year'] : $va_end_pieces['year'];
+							if (($vn_year == TEP_START_OF_UNIVERSE) || ($vn_year == TEP_END_OF_UNIVERSE)) { $vn_year = null; }
+							$vs_output .= $vn_year;
+							break;
+						case 'y':
+							$vn_year = (!$va_seen[$vs_c]) ? $va_start_pieces['year'] : $va_end_pieces['year'];
+							if (($vn_year == TEP_START_OF_UNIVERSE) || ($vn_year == TEP_END_OF_UNIVERSE)) { $vn_year = null; }
+							$vs_output .= substr($vn_year, 2);
+							break;
+						case 'd':
+							$vs_output .= (!$va_seen[$vs_c]) ? sprintf("%02d", $va_start_pieces['day']) : sprintf("%02d", $va_end_pieces['day']);
+							break;
+						case 'j':
+							$vs_output .= (!$va_seen[$vs_c]) ? (int)$va_start_pieces['day'] : (int)$va_end_pieces['day'];
+							break;
+						case 'F':
+							$vs_output .= (!$va_seen[$vs_c]) ? $this->getMonthName($va_start_pieces['month']) : $this->getMonthName($va_end_pieces['month']);
+							break;
+						case 'm':
+							$vs_output .= (!$va_seen[$vs_c]) ? sprintf("%02d", $va_start_pieces['day']) : sprintf("%02d", $va_end_pieces['day']);
+							break;
+						case 'n':
+							$vs_output .= (!$va_seen[$vs_c]) ? (int)$va_start_pieces['day'] : (int)$va_end_pieces['day'];
+							break;
+						case 't':
+							$vs_output .= (!$va_seen[$vs_c]) ? $this->daysInMonth($va_start_pieces['month'], $va_start_pieces['year']) : $this->daysInMonth($va_end_pieces['month'], $va_end_pieces['year']);
+							break;
+						case 'g':
+							$vn_24h_time = (!$va_seen[$vs_c]) ? (int)$va_start_pieces['hours'] : (int)$va_end_pieces['hours'];
+							if ($vn_24h_time > 12) { $vn_24h_time -= 12; }
+							$vs_output .= $vn_24h_time;
+							break;
+						case 'G':
+							$vs_output .= (!$va_seen[$vs_c]) ? (int)$va_start_pieces['hours'] : (int)$va_end_pieces['hours'];
+							break;
+						case 'h':
+							$vn_24h_time = (!$va_seen[$vs_c]) ? (int)$va_start_pieces['hours'] : (int)$va_end_pieces['hours'];
+							if ($vn_24h_time > 12) { $vn_24h_time -= 12; }
+							$vs_output .= sprintf("%02d", $vn_24h_time);
+							break;
+						case 'H':
+							$vs_output .= (!$va_seen[$vs_c]) ? sprintf("%02d", $va_start_pieces['hours']) : sprintf("%02d", $va_end_pieces['hours']);
+							break;
+						case 'i':
+							$vs_output .= (!$va_seen[$vs_c]) ? sprintf("%02d", $va_start_pieces['minutes']) : sprintf("%02d", $va_end_pieces['minutes']);
+							break;
+						case 's':
+							$vs_output .= (!$va_seen[$vs_c]) ? sprintf("%02d", $va_start_pieces['seconds']) : sprintf("%02d", $va_end_pieces['seconds']);
+							break;
+						default:
+							$vb_not_handled = true;
+							$vs_output .= $vs_c;
+							break;
+					}
+					if (!$vb_not_handled) {
+						$va_seen[$vs_c]++;
+					}
+				}
+				
+				return $vs_output;
 			}
 
 			// catch quarter centuries
@@ -2540,9 +2615,15 @@ class TimeExpressionParser {
 						if ((($va_start_pieces['year'] % 100) == 0) && ($va_end_pieces['year'] == ($va_start_pieces['year'] + 99))) {
 							$vn_century = intval($va_start_pieces['year']/100) + 1;
 							$va_ordinals = $this->opo_language_settings->getList("ordinalSuffixes");
+							$va_ordinal_exceptions = $this->opo_language_settings->get("ordinalSuffixExceptions");
+							$vs_ordinal_default = $this->opo_language_settings->get("ordinalSuffixDefault");
 
-							if (!($vs_ordinal = $va_ordinals[$vn_century])) {
-								$vs_ordinal = $this->opo_language_settings->get("ordinalSuffixDefault");
+							$vn_x = intval(substr((string)$vn_century, -1));
+
+							if(is_array($va_ordinal_exceptions) && isset($va_ordinal_exceptions[$vn_century])) {
+								$vs_ordinal = $va_ordinal_exceptions[$vn_century];
+							} else {
+								$vs_ordinal = isset($va_ordinals[$vn_x]) ? $va_ordinals[$vn_x] : $vs_ordinal_default;
 							}
 
 							$va_century_indicators = $this->opo_language_settings->getList("centuryIndicator");
@@ -2962,7 +3043,7 @@ class TimeExpressionParser {
 	public function getISODateTime($pa_date, $ps_mode='START', $pa_options=null) {
 		if (!$pa_date['month']) { $pa_date['month'] = ($ps_mode == 'END') ? 12 : 1; }
 		if (!$pa_date['day']) { $pa_date['day'] = ($ps_mode == 'END') ? 31 : 1; }
-		if ($ps_mode = 'FULL') {
+		if ($ps_mode == 'FULL') {
 			$vs_date = $pa_date['year'].'-'.sprintf("%02d", $pa_date['month']).'-'.sprintf("%02d", $pa_date['day']);
 			
 			if (!isset($pa_options['timeOmit']) || !$pa_options['timeOmit']) {
@@ -3029,20 +3110,26 @@ class TimeExpressionParser {
 				
 				$vn_s = intval($vn_s/100) * 100;
 				$vn_e = intval($vn_e/100) * 100;
-				
+
 				if ($vn_s <= $vn_e) {
 					$va_century_indicators = 	$this->opo_language_settings->getList("centuryIndicator");
 					$va_ordinals = 				$this->opo_language_settings->getList("ordinalSuffixes");
 					$vs_ordinal_default = 		$this->opo_language_settings->get("ordinalSuffixDefault");
 					$vs_bc_indicator = 			$this->opo_language_settings->get("dateBCIndicator");
-					
+					$va_ordinal_exceptions =	$this->opo_language_settings->get("ordinalSuffixExceptions");
+
 					for($vn_y=$vn_s; $vn_y <= $vn_e; $vn_y+= 100) {
-						
+
 						$vn_century_num = abs(floor($vn_y/100)) + 1;
 						if ($vn_century_num == 0)  { continue; }
-						$vn_x = substr((string)$vn_century_num, strlen($vn_century_num) - 1, 1); 
-						$vs_ordinal_to_display = isset($va_ordinals[$vn_x]) ? $va_ordinals[$vn_x] : $vs_ordinal_default;
-						
+						$vn_x = substr((string)$vn_century_num, strlen($vn_century_num) - 1, 1);
+
+						if(is_array($va_ordinal_exceptions) && isset($va_ordinal_exceptions[$vn_century_num])) {
+							$vs_ordinal_to_display = $va_ordinal_exceptions[$vn_century_num];
+						} else {
+							$vs_ordinal_to_display = isset($va_ordinals[$vn_x]) ? $va_ordinals[$vn_x] : $vs_ordinal_default;
+						}
+
 						$va_values[(int)$vn_y] = ($vn_century_num).$vs_ordinal_to_display.' '.$va_century_indicators[0].((floor($vn_y/100) < 0) ? ' '.$vs_bc_indicator : '');
 					}
 				}
@@ -3137,20 +3224,20 @@ class TimeExpressionParser {
 				
 				if (!$vn_s || !$vn_e) { break; }
 				
-				$vs_bc_indicator = 			$this->opo_language_settings->get("dateBCIndicator");
+				$vs_bc_indicator = $this->opo_language_settings->get("dateBCIndicator");
 				if ($vn_s <= $vn_e) {
-					for($vn_y=$vn_s; $vn_y <= $vn_e; $vn_y++) {
-						if ($vn_y == 0) { continue; }
-						if ($vn_y < 0) {
-							$va_values[(int)$vn_y] = abs($vn_y).' '.$vs_bc_indicator;
+					for($y=$vn_s; $y <= $vn_e; $y++) {
+						if ($y == 0) { continue; }
+						if ($y < 0) {
+							$va_values[(int)$y] = abs($y).' '.$vs_bc_indicator;
 						} else {
-							$va_values[(int)$vn_y] = $vn_y;
+							$va_values[(int)$y] = $y;
 						}
 					}
 				}
 				break;
 		}
-		
+
 		return $va_values;
 	}
 	# -------------------------------------------------------------------
