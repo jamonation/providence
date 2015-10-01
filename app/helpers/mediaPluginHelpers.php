@@ -548,6 +548,7 @@
 		$va_mappings = $o_metadata_config->getAssoc('export_mappings');
 		$o_xmp = new XMPParser();
 		
+		return $vs_filepath;
 		copy($vs_filepath, $vs_tmp_filepath = caGetTempDirPath()."/".time().md5($vs_filepath));
 		
 		$o_xmp->parse($vs_tmp_filepath);
